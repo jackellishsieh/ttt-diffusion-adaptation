@@ -58,8 +58,8 @@ class MetricsTracker:
         self,
         prompt_id: str,
         trial_id: str,
-        round_number: int,
-        image_index: int,
+        round: int,
+        image_idx: int,
         image_path: str,
         user_score: float,
         image: Image.Image,
@@ -71,8 +71,8 @@ class MetricsTracker:
         Args:
             prompt_id: Identifier for the prompt.
             trial_id: Identifier for the trial (independent runs)
-            round_number: Feedback round index.
-            image_index: Index of image within batch for this round.
+            round: Feedback round index.
+            image_idx: Index of image within batch for this round.
             image_path: Path where image is saved.
             user_score: Scalar score assigned to image.
             image: PIL Image object (not stored; used only for metric computation).
@@ -81,8 +81,8 @@ class MetricsTracker:
         record: dict[str, Any] = {
             "prompt_id": prompt_id,
             "trial_id": trial_id,
-            "round_number": int(round_number),
-            "image_index": int(image_index),
+            "round": int(round),
+            "image_idx": int(image_idx),
             "image_path": str(image_path),
             "user_score": float(user_score),
             "chosen": None,  # not yet determined
@@ -107,8 +107,8 @@ class MetricsTracker:
         self,
         prompt_id: str,
         trial_id: str,
-        round_number: int,
-        chosen_image_index: int,  # index of the chosen image within the batch for this round
+        round: int,
+        chosen_image_idx: int,  # index of the chosen image within the batch for this round
     ) -> None:
         """
         Mark which image was chosen for the given prompt + trial + round.
@@ -118,9 +118,9 @@ class MetricsTracker:
             if (
                 record["prompt_id"] == prompt_id
                 and record["trial_id"] == trial_id
-                and record["round_number"] == round_number
+                and record["round"] == round
             ):
-                record["chosen"] = record["image_index"] == chosen_image_index
+                record["chosen"] = record["image_idx"] == chosen_image_idx
 
     def to_dataframe(self) -> pd.DataFrame:
         """
