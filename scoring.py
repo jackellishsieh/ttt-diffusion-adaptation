@@ -63,3 +63,14 @@ def _score_brightness(image: Image.Image, rubric: dict[str, any]) -> float:
     """
     arr = np.asarray(image.convert("RGB")).astype(np.float32) / 255.0 # mean brightness of the image
     return float(arr.mean())
+
+
+# Test stub
+if __name__ == "__main__":
+    im = Image.new("RGB", (64, 64), color=(128, 128, 128))
+    
+    rubric = {}
+
+    for type in ["brightness", "random"]:
+        rubric["type"] = type
+        print(f"{type} score:", score_image(im, rubric))
