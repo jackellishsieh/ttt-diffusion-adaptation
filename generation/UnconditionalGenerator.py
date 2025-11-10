@@ -1,7 +1,7 @@
 from __future__ import annotations
-from typing import Any
-from abc import override
-from FeedbackAwareGenerator import FeedbackAwareGenerator
+from typing import Any, override
+from .FeedbackAwareGenerator import FeedbackAwareGenerator
+from PIL import Image
 
 class UnconditionalGenerator(FeedbackAwareGenerator):
     """
@@ -9,7 +9,7 @@ class UnconditionalGenerator(FeedbackAwareGenerator):
     """
 
     @override
-    def generate(self, prompt: str, sampling_parameters: dict[str, any]) -> dict[str, Any]:
+    def generate(self, prompt: str, sampling_parameters: dict[str, any]) -> list[Image.Image]:
         """
         Run standard generation with no conditioning on feedback.
 
@@ -24,7 +24,7 @@ class UnconditionalGenerator(FeedbackAwareGenerator):
             )
         """
         output = self.diffusion_pipeline(prompt=prompt, **sampling_parameters)
-        return output
+        return output.images
 
 
     @override

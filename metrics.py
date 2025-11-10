@@ -7,7 +7,7 @@ Metrics recorded per image:
 """
 
 from __future__ import annotations
-from typing import Any, Callable, list, Optional
+from typing import Any, Callable, Optional
 from pathlib import Path
 import pandas as pd
 import numpy as np

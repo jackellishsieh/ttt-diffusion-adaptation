@@ -6,6 +6,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any
 from diffusers import DiffusionPipeline
+from PIL import Image
 
 
 class FeedbackAwareGenerator(ABC):
@@ -27,7 +28,7 @@ class FeedbackAwareGenerator(ABC):
 
 
     @abstractmethod
-    def generate(self, prompt: str, sampling_parameters: dict[str, Any]) -> dict[str, Any]:
+    def generate(self, prompt: str, sampling_parameters: dict[str, Any]) -> list[Image.Image]:
         """
         Generate images given a text prompt and sampling parameters.
 
@@ -39,7 +40,7 @@ class FeedbackAwareGenerator(ABC):
                 (e.g., num_inference_steps, guidance_scale, num_images_per_prompt, etc.)
 
         Returns:
-            dict[str, Any]
+            list[Image.Image]
             The full output from the DiffusionPipeline call, including images and metadata.
         """
         raise NotImplementedError

@@ -7,10 +7,15 @@ requires-python = ">=3.12"
 dependencies = [
     "accelerate>=1.11.0",
     "diffusers>=0.30.0",
+    "hf>=1.1.0",
     "ipykernel>=7.1.0",
     "ipynb>=0.5.1",
+    "ipywidgets>=8.1.8",
     "matplotlib>=3.10.7",
+    "pandas>=2.3.3",
+    "protobuf>=6.33.0",
     "safetensors>=0.6.2",
+    "sentencepiece>=0.2.1",
     "torch>=2.9.0",
     "transformers>=4.42.0",
 ]
