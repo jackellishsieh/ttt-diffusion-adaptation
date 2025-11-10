@@ -28,7 +28,7 @@ class UnconditionalGenerator(FeedbackAwareGenerator):
 
 
     @override
-    def condition_on_feedback(self, feedback: dict[str, Any]) -> None:
+    def update(self, feedback: dict[str, Any]) -> None:
         """
         Does nothing — this generator is unconditional.
         """

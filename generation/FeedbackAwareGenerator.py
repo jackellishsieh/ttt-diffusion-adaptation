@@ -46,7 +46,7 @@ class FeedbackAwareGenerator(ABC):
 
 
     @abstractmethod
-    def condition_on_feedback(self, feedback: dict[str, Any]) -> None:
+    def update(self, feedback: dict[str, Any]) -> None:
         """
         Update the internal state based on feedback information.
 
