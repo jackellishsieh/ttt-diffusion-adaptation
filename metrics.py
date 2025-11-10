@@ -122,6 +122,42 @@ class MetricsTracker:
             ):
                 record["chosen"] = record["image_idx"] == chosen_image_idx
 
+
+    def clone_previous_winner(
+        self,
+        prompt_id: str,
+        trial_id: str,
+        round: int, # the current round
+        new_image_path: str
+    ) -> dict[str, Any]:
+        """
+        Clone a previously logged image record into a new round,
+        marking it as reused_from_previous=True (i.e., a previous winner) and updating file path and round.
+        Returns the cloned OLD record (with the previous filename) as a dictionary for convenience.
+        """
+        # Find the winner of the previous round
+        candidates = [
+            r for r in self._records
+            if r["prompt_id"] == prompt_id
+            and r["trial_id"] == trial_id
+            and r["round"] == round - 1
+            and r["chosen"] == True
+        ]
+        if not candidates:
+            raise ValueError("No matching record found to duplicate.")
+        if len(candidates) > 1:
+            raise ValueError("Multiple matching records found to duplicate.")
+
+        previous_winner = candidates[0] # to be returned as the old entry
+        clone = previous_winner.copy() # to be cloned as the new entry
+        clone["round"] = round + 1
+        clone["image_path"] = str(new_image_path)
+        clone["reused_from_previous"] = True
+        clone["chosen"] = None
+        self._records.append(clone)
+
+        return previous_winner
+
     def to_dataframe(self) -> pd.DataFrame:
         """
         Convert records to a pandas DataFrame.
@@ -129,6 +165,9 @@ class MetricsTracker:
         df = pd.DataFrame(self._records)
         if not df.empty and "chosen" in df.columns:
             df["chosen"] = df["chosen"].astype("boolean")
+        if not df.empty and "reused_from_previous" in df.columns:
+            df["reused_from_previous"] = df["reused_from_previous"].astype("boolean") # make default false
+            df["reused_from_previous"] = df["reused_from_previous"].fillna(False)
         return df
 
     def save(self, filepath: str) -> None:
