@@ -1,0 +1,3 @@
+[submodule "libs/ImageReward"]
+	path = libs/ImageReward
+	url = https://github.com/zai-org/ImageReward.git
