@@ -10,12 +10,15 @@ dependencies = [
     "datasets>=2.11.0",
     "diffusers>=0.16.0",
     "fairscale>=0.4.13",
-    "huggingface-hub>=0.13.4",
     "ipykernel>=7.1.0",
     "pip>=25.3",
     "timm>=0.6.13",
     "torch>=2.9.1",
     "transformers>=4.27.4",
+    "hf>=1.1.0",
+    "protobuf>=6.33.1",
+    "safetensors>=0.6.2",
+    "sentencepiece>=0.2.1",
 ]
 
 [tool.uv.sources]
