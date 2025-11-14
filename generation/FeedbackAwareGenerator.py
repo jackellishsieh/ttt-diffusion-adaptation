@@ -26,18 +26,23 @@ class FeedbackAwareGenerator(ABC):
         self.hyperparameters = kwargs
         self.feedback_state: dict[str, Any] = {}
 
+    @abstractmethod
+    def initialize(self, prompt: str, batch_size: int = 4) -> None:
+        """
+        Initialize the generator for a new trial.
+        """
+        raise NotImplementedError
 
     @abstractmethod
-    def generate(self, prompt: str, sampling_parameters: dict[str, Any]) -> list[Image.Image]:
+    def generate(self, sampling_parameters: dict[str, Any]) -> list[Image.Image]:
         """
         Generate images given a text prompt and sampling parameters.
 
         Args:
-            prompt : str
-                The input text prompt for generation.
             sampling_parameters : dict[str, Any]
                 dictionary of keyword arguments forwarded to the diffusion pipeline
-                (e.g., num_inference_steps, guidance_scale, num_images_per_prompt, etc.)
+                (e.g., num_inference_steps, guidance_scale, etc.)
+                Should not include prompt or num_images_per_prompt, which are handled by the generator.
 
         Returns:
             list[Image.Image]
@@ -47,13 +52,13 @@ class FeedbackAwareGenerator(ABC):
 
 
     @abstractmethod
-    def update(self, feedback: dict[str, Any]) -> None:
+    def update(self, winner_index: int) -> None:
         """
         Update the internal state based on feedback information.
 
         Args:
-        feedback : dict[str, Any]
-            Dictionary containing information about prior generations, scores, or other signals that should influence future calls to generate().
+        winner_index : int
+            Index of the winner in the current batch
         """
         raise NotImplementedError
 

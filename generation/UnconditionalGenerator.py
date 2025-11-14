@@ -9,13 +9,19 @@ class UnconditionalGenerator(FeedbackAwareGenerator):
     """
 
     @override
-    def generate(self, prompt: str, sampling_parameters: dict[str, any]) -> list[Image.Image]:
+    def initialize(self, prompt: str, batch_size: int = 4) -> None:
+        """
+        Initialize the generator for a new trial.
+        """
+        self.prompt = prompt
+
+    @override
+    def generate(self, sampling_parameters: dict[str, any]) -> list[Image.Image]:
         """
         Run standard generation with no conditioning on feedback.
 
         Example:
             output = generator.generate(
-                prompt="a cat wearing sunglasses",
                 sampling_parameters={
                     "num_inference_steps": 25,
                     "guidance_scale": 7.5,
@@ -23,12 +29,12 @@ class UnconditionalGenerator(FeedbackAwareGenerator):
                 }
             )
         """
-        output = self.diffusion_pipeline(prompt=prompt, **sampling_parameters)
+        output = self.diffusion_pipeline(prompt=self.prompt, **sampling_parameters)
         return output.images
 
 
     @override
-    def update(self, feedback: dict[str, Any]) -> None:
+    def update(self, winner_index: int) -> None:
         """
         Does nothing — this generator is unconditional.
         """
