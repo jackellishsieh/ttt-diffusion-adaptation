@@ -150,7 +150,8 @@ class MetricsTracker:
 
         previous_winner = candidates[0] # to be returned as the old entry
         clone = previous_winner.copy() # to be cloned as the new entry
-        clone["round"] = round + 1
+        clone["round"] = round 
+        clone["image_idx"] = 0
         clone["image_path"] = str(new_image_path)
         clone["reused_from_previous"] = True
         clone["chosen"] = None

@@ -19,6 +19,9 @@ dependencies = [
     "protobuf>=6.33.1",
     "safetensors>=0.6.2",
     "sentencepiece>=0.2.1",
+    "matplotlib>=3.10.7",
+    "ipywidgets>=8.1.8",
+    "jupyter>=1.1.1",
 ]
 
 [tool.uv.sources]

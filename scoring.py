@@ -35,7 +35,7 @@ def score_image(images: Image.Image | list[Image.Image], rubric: dict[str, any])
     Returns:
         A single float score or a list of float scores
     """
-    t = rubric.get("type", "").lower()
+    t = rubric.get("type", "")
 
     match (t):
         case "brightness":
