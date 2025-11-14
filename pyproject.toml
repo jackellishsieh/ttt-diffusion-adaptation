@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "clip>=0.2.0",
     "image-reward>=1.5",
     "ipykernel>=7.1.0",
 ]
