@@ -5,7 +5,19 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "clip>=0.2.0",
-    "image-reward>=1.5",
+    "image-reward",
+    "accelerate>=0.16.0",
+    "datasets>=2.11.0",
+    "diffusers>=0.16.0",
+    "fairscale>=0.4.13",
+    "huggingface-hub>=0.13.4",
     "ipykernel>=7.1.0",
+    "pip>=25.3",
+    "timm>=0.6.13",
+    "torch>=2.9.1",
+    "transformers>=4.27.4",
 ]
+
+[tool.uv.sources]
+# Only keep the local path dependency for image-reward
+"image-reward" = { path = "./libs/ImageReward", editable = true }
