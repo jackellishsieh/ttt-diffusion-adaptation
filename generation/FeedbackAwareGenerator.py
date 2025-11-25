@@ -24,14 +24,15 @@ class FeedbackAwareGenerator(ABC):
     def __init__(self, diffusion_pipeline: DiffusionPipeline, **kwargs: Any) -> None:
         self.diffusion_pipeline = diffusion_pipeline
         self.hyperparameters = kwargs
-        self.feedback_state: dict[str, Any] = {}
 
     @abstractmethod
     def initialize(self, prompt: str, batch_size: int = 4) -> None:
         """
         Initialize the generator for a new trial.
         """
-        raise NotImplementedError
+        self.prompt = prompt
+        self.batch_size = batch_size
+        self.is_first_batch = True
 
     @abstractmethod
     def generate(self, sampling_parameters: dict[str, Any]) -> list[Image.Image]:
