@@ -97,11 +97,13 @@ class LatentSurvivalGenerator(FeedbackAwareGenerator):
         # For subsequent batches, mix the noise with the running latent
         else:
             new_latents = (1 - self.alpha) * self.running_latent + self.alpha * noise  # broadcasts
+            scale_factor = ((1 - self.alpha)**2 + self.alpha**2)**0.5 # this is the approximate standard deviation of the mixed latent
+            new_latents /= scale_factor # normalize to approximately unit variance for consistent mixing (otherwise, image becomes blurry)
+            
             self.batch_latents = torch.cat([self.last_winner_latent.unsqueeze(0), new_latents], dim=0)
 
-        # Run diffusion (rescale latents back to pipeline-expected scale)
-        scaled_latents = new_latents * self.diffusion_pipeline.scheduler.init_noise_sigma
-        output = self.diffusion_pipeline(prompt=self.prompt, num_images_per_prompt=num_new_images, latents=scaled_latents, **sampling_parameters)
+        # Run diffusion
+        output = self.diffusion_pipeline(prompt=self.prompt, num_images_per_prompt=num_new_images, latents=new_latents, **sampling_parameters)
         return output.images
 
     # -------------------------------------------------------
