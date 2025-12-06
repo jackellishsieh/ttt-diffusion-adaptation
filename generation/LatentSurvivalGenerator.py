@@ -5,6 +5,7 @@ from PIL import Image
 from diffusers import DiffusionPipeline
 import torch
 
+Latent = torch.Tensor
 
 class LatentSurvivalGenerator(FeedbackAwareGenerator):
     """
@@ -96,10 +97,7 @@ class LatentSurvivalGenerator(FeedbackAwareGenerator):
             self.batch_latents = new_latents
         # For subsequent batches, mix the noise with the running latent
         else:
-            new_latents = (1 - self.alpha) * self.running_latent + self.alpha * noise  # broadcasts
-            scale_factor = ((1 - self.alpha)**2 + self.alpha**2)**0.5 # this is the approximate standard deviation of the mixed latent
-            new_latents /= scale_factor # normalize to approximately unit variance for consistent mixing (otherwise, image becomes blurry)
-            
+            new_latents = LatentSurvivalGenerator.mix(running_latent=self.running_latent, noise=noise, alpha=self.alpha)
             self.batch_latents = torch.cat([self.last_winner_latent.unsqueeze(0), new_latents], dim=0)
 
         # Run diffusion
@@ -122,3 +120,9 @@ class LatentSurvivalGenerator(FeedbackAwareGenerator):
             self.running_latent = self.last_winner_latent
         else:
             self.running_latent = (1 - self.gamma) * self.running_latent + self.gamma * self.last_winner_latent
+
+    @classmethod
+    def mix(cls, running_latent: Latent, noise: Latent, alpha: float) -> Latent:
+        scale_factor = ((1 - alpha)**2 + alpha**2)**0.5
+        mixed_latent = (alpha * noise + (1 - alpha) * running_latent) / scale_factor
+        return mixed_latent
