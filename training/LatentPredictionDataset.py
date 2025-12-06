@@ -134,18 +134,30 @@ class LatentPredictionDataset(Dataset):
 
         return DataPoint(round, trial_id, prompt_id, alpha, all_latents[winner_idx], [l for i, l in enumerate(all_latents) if i != winner_idx])  # Winner  # Losers
 
-    # def _get_latent_list_from_seeds(seeds: list[int]) -> list[Latent]:
-    #     generators = [torch.Generator(device="cpu").manual_seed(seed) for seed in seeds]
-    #     latents = [
-    #             pipe.prepare_latents(
-    #                 batch_size=1,
-    #                 num_channels_latents=pipe.unet.config.in_channels,
-    #                 height=512,
-    #                 width=512,
-    #                 dtype=pipe.unet.dtype,
-    #                 device="cpu",
-    #                 generator=generator,
-    #             )[0] / pipe.scheduler.init_noise_sigma
-    #             for generator in generators
-    #         ]
-    #     return latents
+
+def create_splits(df, group_cols=['trial_id', 'prompt_id', 'alpha'], val_ratio=0.1, seed=42):
+    """
+    Splits a dataframe into Train/Val ensuring that all rounds for a specific
+    (trial, prompt, alpha) group stay together.
+
+    This way, all rounds for a specific trial are either in the train or val set, but not both.
+    """
+    # 1. Identify unique runs (The "Groups")
+    unique_groups = df[group_cols].drop_duplicates()
+    
+    # 2. Sample groups for the Validation set
+    val_groups = unique_groups.sample(frac=val_ratio, random_state=seed)
+    
+    # 3. The rest are Training groups
+    # We simply drop the validation indices from the unique list
+    train_groups = unique_groups.drop(val_groups.index)
+    
+    # 4. Filter the original huge DataFrame using Inner Joins
+    # This keeps only the rows belonging to the selected groups
+    train_df = df.merge(train_groups, on=group_cols, how='inner')
+    val_df = df.merge(val_groups, on=group_cols, how='inner')
+    
+    print(f"Total Groups: {len(unique_groups)}")
+    print(f"Train Rows: {len(train_df)} | Val Rows: {len(val_df)}")
+    
+    return train_df, val_df
