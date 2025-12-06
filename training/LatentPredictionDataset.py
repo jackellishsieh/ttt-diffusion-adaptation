@@ -1,21 +1,23 @@
 import torch
 from torch.utils.data import Dataset
 import pandas as pd
-from typing import Callable, NamedTuple
+from typing import Callable
 from generation.LatentSurvivalGenerator import LatentSurvivalGenerator
-
+from dataclasses import dataclass
 
 Latent = torch.Tensor  # we'll represent as 3-dimensional, not 4-dimensional. We'll add the first dimension (batch size) only when needed.
+LatentSet = torch.Tensor  # intended to be a 4D tensor [batch_size, 4, latent_channels, latent_height, latent_width]
 SeedToLatent = Callable[[[list[int]]], list[Latent]]  # given a list of seeds, prepare the latents
 
 
-class DataPoint(NamedTuple):
+@dataclass
+class DataPoint:
     round: int
     trial_id: str
     prompt_id: str
     alpha: float
     winner_latent: Latent
-    loser_latents: list[Latent]
+    loser_latents: LatentSet
 
     def __str__(self):
         s = "DataPoint:"
@@ -26,13 +28,13 @@ class DataPoint(NamedTuple):
         s += f"\n\twinner_latent: {self.winner_latent.shape}"
         s += f"\n\tloser_latents: {[l.shape for l in self.loser_latents]}"
         return s
-    
+
     def __repr__(self):
         return self.__str__()
 
 
 class LatentPredictionDataset(Dataset):
-    def __init__(self, metrics_df: pd.DataFrame, seeds_to_latent: SeedToLatent, alpha_range=None):
+    def __init__(self, metrics_df: pd.DataFrame, seeds_to_latent: SeedToLatent, alpha_range=None, dtype=torch.float32):
         """
         Args:
             metrics_df: The raw metrics dataframe.
@@ -58,6 +60,9 @@ class LatentPredictionDataset(Dataset):
         self.rounds_per_trial = 4
         self.transitions_per_trial = self.rounds_per_trial - 1
 
+        # Output types
+        self.dtype = dtype
+
     def __len__(self):
         return len(self.groups) * self.transitions_per_trial
 
@@ -77,11 +82,26 @@ class LatentPredictionDataset(Dataset):
         target_round = transition_idx + 1
 
         # Fetch DataPoints
-        # Note: Updated to pass 'alpha' to your helper function if needed
         dp_input = self._get_data_point(input_round, trial_id, prompt_id, alpha)
         dp_target = self._get_data_point(target_round, trial_id, prompt_id, alpha)
 
-        return dp_input, dp_target
+        # Return a dictionary that DataLoader can collate
+        return {
+            # Input data (what the model sees)
+            "input_winner_latent": dp_input.winner_latent.to(dtype=self.dtype),      # [4, H, W]
+            "input_loser_latents": dp_input.loser_latents.to(dtype=self.dtype),      # [3, 4, H, W]
+            
+            # Target data (ground truth)
+            "target_winner_latent": dp_target.winner_latent.to(dtype=self.dtype),    # [4, H, W]
+            "target_loser_latents": dp_target.loser_latents.to(dtype=self.dtype),    # [3, 4, H, W]
+
+            # Metadata (for debugging/analysis)
+            "alpha": alpha,
+            "input_round": input_round,
+            "target_round": target_round,
+            "trial_id": trial_id,
+            "prompt_id": prompt_id,
+        }
 
     def _get_data_point(self, round: int, trial_id: str, prompt_id: str, alpha: float) -> tuple[DataPoint, DataPoint]:
         # 1. Filter Context
@@ -98,7 +118,18 @@ class LatentPredictionDataset(Dataset):
             winner_seed = curr_rows.loc[curr_rows["chosen"], "seed"].item()
             loser_seeds = curr_rows.loc[~curr_rows["chosen"], "seed"].tolist()
 
-            return DataPoint(round, trial_id, prompt_id, alpha, get_latent(winner_seed), self.seeds_to_latent(loser_seeds))
+            winner_latent = get_latent(winner_seed)
+            loser_latents = self.seeds_to_latent(loser_seeds)
+            loser_latents = torch.stack(loser_latents, dim=0)
+
+            return DataPoint(
+                round=round,
+                trial_id=trial_id,
+                prompt_id=prompt_id,
+                alpha=alpha,
+                winner_latent=winner_latent,
+                loser_latents=loser_latents,
+            )
 
         # --- CASE 2: Round > 0 (Adaptation) ---
 
@@ -129,13 +160,22 @@ class LatentPredictionDataset(Dataset):
         # 4. separate Winner vs Losers
         winner_idx = curr_rows.loc[curr_rows["chosen"], "image_idx"].item()
 
-        # Construct final list of 4 to ensure correct indexing
+        # Construct final list of 4 to ensure correct indexing, and cast to device
         all_latents = [latents_by_idx[i] for i in range(4)]
+        winner_latent = all_latents[winner_idx]
+        loser_latents = torch.stack([l for i, l in enumerate(all_latents) if i != winner_idx], dim=0)
 
-        return DataPoint(round, trial_id, prompt_id, alpha, all_latents[winner_idx], [l for i, l in enumerate(all_latents) if i != winner_idx])  # Winner  # Losers
+        return DataPoint(
+            round=round,
+            trial_id=trial_id,
+            prompt_id=prompt_id,
+            alpha=alpha,
+            winner_latent=winner_latent,
+            loser_latents=loser_latents,
+        )
 
 
-def create_splits(df, group_cols=['trial_id', 'prompt_id', 'alpha'], val_ratio=0.1, seed=42):
+def create_splits(df, group_cols=["trial_id", "prompt_id", "alpha"], val_ratio=0.1, seed=42):
     """
     Splits a dataframe into Train/Val ensuring that all rounds for a specific
     (trial, prompt, alpha) group stay together.
@@ -144,20 +184,20 @@ def create_splits(df, group_cols=['trial_id', 'prompt_id', 'alpha'], val_ratio=0
     """
     # 1. Identify unique runs (The "Groups")
     unique_groups = df[group_cols].drop_duplicates()
-    
+
     # 2. Sample groups for the Validation set
     val_groups = unique_groups.sample(frac=val_ratio, random_state=seed)
-    
+
     # 3. The rest are Training groups
     # We simply drop the validation indices from the unique list
     train_groups = unique_groups.drop(val_groups.index)
-    
+
     # 4. Filter the original huge DataFrame using Inner Joins
     # This keeps only the rows belonging to the selected groups
-    train_df = df.merge(train_groups, on=group_cols, how='inner')
-    val_df = df.merge(val_groups, on=group_cols, how='inner')
-    
+    train_df = df.merge(train_groups, on=group_cols, how="inner")
+    val_df = df.merge(val_groups, on=group_cols, how="inner")
+
     print(f"Total Groups: {len(unique_groups)}")
     print(f"Train Rows: {len(train_df)} | Val Rows: {len(val_df)}")
-    
+
     return train_df, val_df
